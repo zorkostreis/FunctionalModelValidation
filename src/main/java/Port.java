@@ -26,4 +26,12 @@ public class Port {
     public void setName(String name) {
         this.name = name;
     }
+
+    public boolean isOutput() {
+        return this.type.toString().equals("output");
+    }
+
+    public boolean isInput() {
+        return this.type.toString().equals("input");
+    }
 }

@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,5 +49,26 @@ public class Node {
         return id == -1 && Objects.equals(name, "End");
     }
 
+    public boolean hasOnlyOutputPorts() {
+        for (Port port : this.ports)
+            if (!port.isOutput()) { return false; }
 
+        return true;
+    }
+
+    public boolean hasOnlyInputPorts() {
+        for (Port port : this.ports)
+            if (!port.isInput()) { return false; }
+
+        return true;
+    }
+
+    public ArrayList<Integer> getPortsIds() {
+        ArrayList<Integer> portsIds = new ArrayList<>();
+        for (Port port : ports) {
+            portsIds.add(port.getId());
+        }
+
+        return portsIds;
+    }
 }

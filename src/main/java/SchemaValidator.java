@@ -8,6 +8,14 @@ public class SchemaValidator {
     }
 
     public String validate() {
-        return new Gson().toJson(schema.hasStartAndEndNode());
+        return new Gson().toJson(schema.linkedFromStartToEnd());
+    }
+
+    private boolean validatePersistence() {
+        return schema.hasStartAndEndNode() && schema.linkedFromStartToEnd();
+    }
+
+    private boolean validatePortTypes() {
+        return schema.getStartNode().hasOnlyOutputPorts() && schema.getEndNode().hasOnlyInputPorts();
     }
 }
