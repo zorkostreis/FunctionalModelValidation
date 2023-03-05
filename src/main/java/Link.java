@@ -65,51 +65,15 @@ public class Link {
         return Stream.of(from, to).filter(port_id -> port_id != 0).toList();
     }
 
-    public boolean hasPortIds() {
-        if (from == 0 && to == 0) {
-            System.out.println("Link does not have port ids" + id);
-            return false;
-        }
-
-        return true;
+    public boolean hasFrom() {
+        return from != 0;
     }
 
-    public boolean hasFromAndToPortIds() {
-        if (from == 0) {
-            System.out.println("Link does not have From port" + id);
-            return false;
-        }
-        else if (to == 0) {
-            System.out.println("Link does not have To port" + id);
-            return false;
-        }
-
-        return true;
-    }
-    public boolean hasOnlyOnePortId() {
-        if (from != 0 && to != 0) {
-            System.out.println("Link has both To and From port ids" + id);
-            return false;
-        }
-
-        return true;
+    public boolean hasTo() {
+        return to != 0;
     }
 
-//    public boolean existsBetweenNodes(Node from, Node to) {
-//        if (from == null || to == null) { return false; }
-//
-//        for (Port fromPort : from.getPorts()) {
-//            for (Port toPort : to.getPorts()) {
-//                Link result = findByPorts(fromPort, toPort);
-//
-//                if (result != null) { return true; }
-//            }
-//        }
-//
-//        return false;
-//    }
-
-//    private Link findByPorts(Port from, Port to) {
-//        return from.getId() == this.from && to.getId() == this.to ? this : null;
-//    }
+    public boolean lacksPortIds() {
+        return from == 0 && to == 0;
+    }
 }
