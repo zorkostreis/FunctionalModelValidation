@@ -1,12 +1,9 @@
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Link {
-    public enum LinkTypes {
-        external,
-        internal
-    }
-
     private int id;
     private int from;
     private int to;
@@ -62,7 +59,7 @@ public class Link {
     }
 
     public List<Integer> getPortIds() {
-        return Stream.of(from, to).filter(port_id -> port_id != 0).toList();
+        return Stream.of(from, to).filter(portId -> portId != 0).collect(Collectors.toCollection(ArrayList::new));
     }
 
     public boolean hasFrom() {

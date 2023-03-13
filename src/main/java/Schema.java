@@ -4,13 +4,15 @@ public class Schema {
     private List<Node> nodes;
     private List<Link> links;
 
-    private HashMap<String, Object> errors;
+    private HashMap<String, HashMap<String, ArrayList<Object>>> errors;
 
     public Schema() {
-        this.errors = new HashMap<>();;
+        this.errors = new HashMap<>();
+        this.errors.put("nodes", new HashMap<>());
+        this.errors.put("links", new HashMap<>());
     }
 
-    public HashMap<String, Object> getErrors() { return errors; };
+    public HashMap<String, HashMap<String, ArrayList<Object>>> getErrors() { return errors; };
 
     public List<Node> getNodes() {
         return nodes;
@@ -29,77 +31,71 @@ public class Schema {
     }
 
     public boolean nodesHaveValidPortTypes() {
-        List<Integer> nodesWithInvalidPortTypes = new ArrayList<>();
-
-        for(Node node: nodes) {
-            if (!node.hasValidPortTypes()) {
-                nodesWithInvalidPortTypes.add(node.getId());
-            }
-        }
-
-        if (!nodesWithInvalidPortTypes.isEmpty()) {
-            errors.put("Nodes with invalid port types", nodesWithInvalidPortTypes);
-            return false;
-        }
+        for (Node node : nodes)
+            if (!node.hasValidPortTypes())
+                updateErrors("nodes", node.getId(), "invalid port types");
 
         return true;
     }
 
-    public boolean nodesHavePortsOfEachType() {
-        List<HashMap> nodesWithoutEachPort = new ArrayList<>();
+    private void updateErrors(String key, Integer objectId, Object errorMessage) {
+        HashMap <String, ArrayList<Object>> currentCollection = this.errors.get(key);
+        String id = String.valueOf(objectId);
 
-        for(Node node: nodes) {
+        if (!currentCollection.containsKey(id))
+            currentCollection.put(id, new ArrayList<>());
+
+        ArrayList<Object> objectErrors = currentCollection.get(id);
+        objectErrors.add(errorMessage);
+    }
+
+    public boolean nodesHavePortsOfEachType() {
+        for (Node node: nodes) {
             if (!node.missingPortTypes().isEmpty()) {
-                HashMap<String, Object> map = new HashMap<>();
-                map.put("id", node.getId());
-                map.put("missingPortTypes", node.missingPortTypes());
-                nodesWithoutEachPort.add(map);
+                HashMap<String, List<PortTypes>> errorMap = new HashMap<>();
+                errorMap.put("missingPortTypes", node.missingPortTypes());
+                updateErrors("nodes", node.getId(), errorMap);
             }
         };
-
-        if (!nodesWithoutEachPort.isEmpty()) {
-            errors.put("Nodes without ports of each type", nodesWithoutEachPort);
-            return false;
-        }
 
         return true;
     }
 
     public boolean allPortsLinked() {
-        HashSet<Integer> portIdsFromNodes = new HashSet<>(getPortIdsFromNodes());
-        getPortIdsFromLinks().forEach(portIdsFromNodes::remove);
-
-        if (!portIdsFromNodes.isEmpty()) {
-            errors.put("Ports not connected by links", portIdsFromNodes);
-            return false;
+        List<Integer> portIdsFromLinks = getPortIdsFromLinks();
+        for (Node node : nodes) {
+            List<Integer> nodePortIds = node.getPortIds();
+            nodePortIds.removeAll(portIdsFromLinks);
+            if (!nodePortIds.isEmpty()) {
+                HashMap<String, List<Integer>> errorMap = new HashMap<>();
+                errorMap.put("notConnectedPorts", nodePortIds);
+                updateErrors("nodes", node.getId(), errorMap);
+            }
         }
 
         return true;
     }
 
     public boolean allPortIdsFromLinksExist() {
-        HashSet<Integer> portIdsFromLinks = new HashSet<>(getPortIdsFromLinks());
-        getPortIdsFromNodes().forEach(portIdsFromLinks::remove);
+        List<Integer> portIdsFromNodes = getPortIdsFromNodes();
 
-        if(!portIdsFromLinks.isEmpty()) {
-            errors.put("Ports with these ids do not exist: ", portIdsFromLinks);
-            return false;
+        for (Link link : links) {
+            List<Integer> linkPortIds = link.getPortIds();
+            linkPortIds.removeAll(portIdsFromNodes);
+            if (!linkPortIds.isEmpty()) {
+                HashMap<String, List<Integer>> errorMap = new HashMap<>();
+                errorMap.put("missingPorts", linkPortIds);
+                updateErrors("links", link.getId(), errorMap);
+            }
         }
 
         return true;
     }
 
     public boolean validateLinks() {
-        List<Integer> linksWithoutPortIds = new ArrayList<>();
-        List<Integer> extLinksWithFromAndTo = new ArrayList<>();
-        List<Integer> intLinksWithoutFrom = new ArrayList<>();
-        List<Integer> intLinksWithoutTo = new ArrayList<>();
-        List<Integer> fromPortsNotOutput = new ArrayList<>();
-        List<Integer> toPortsOutput = new ArrayList<>();
-
         for (Link link: links) {
             if (link.lacksPortIds()) {
-                linksWithoutPortIds.add(link.getId());
+                updateErrors("links", link.getId(), "lacks port ids");
                 continue;
             }
 
@@ -109,23 +105,18 @@ public class Schema {
 
             switch (link.getType()) {
                 case external -> {
-                    if (link.hasFrom() && link.hasTo()) { extLinksWithFromAndTo.add(link.getId()); }
+                    if (link.hasFrom() && link.hasTo()) {
+                        updateErrors("links", link.getId(), "external link has FROM and TO ports");
+                    }
                 }
                 case internal -> {
-                    if (!link.hasFrom()) { intLinksWithoutFrom.add(link.getId()); }
-                    if (!link.hasTo()) { intLinksWithoutTo.add(link.getId()); }
+                    if (!link.hasFrom()) { updateErrors("links", link.getId(), "internal link lacks FROM port"); }
+                    if (!link.hasTo()) { updateErrors("links", link.getId(), "internal link lacks TO port"); }
                 }
             };
-            if (fromPort != null && !fromPort.isOutput()) { fromPortsNotOutput.add(link.getId()); }
-            if (toPort != null && toPort.isOutput()) { toPortsOutput.add(link.getId()); }
+            if (fromPort != null && !fromPort.isOutput()) { updateErrors("links", link.getId(), "FROM port is not output"); }
+            if (toPort != null && toPort.isOutput()) { updateErrors("links", link.getId(), "TO port is output"); }
         }
-
-        if (!linksWithoutPortIds.isEmpty()) { errors.put("Links lack port ids", linksWithoutPortIds); }
-        if (!extLinksWithFromAndTo.isEmpty()) { errors.put("External links have FROM and TO", extLinksWithFromAndTo); }
-        if (!intLinksWithoutFrom.isEmpty()) { errors.put("Internal links lack FROM port", intLinksWithoutFrom); }
-        if (!intLinksWithoutTo.isEmpty()) { errors.put("Internal links lack TO port", intLinksWithoutTo); }
-        if (!fromPortsNotOutput.isEmpty()) { errors.put("Links have FROM ports that are not output", fromPortsNotOutput); }
-        if (!toPortsOutput.isEmpty()) { errors.put("Links have TO ports that are output", toPortsOutput); }
 
         return true;
     }
